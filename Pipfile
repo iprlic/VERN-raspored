@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+[requires]
+python_version = '2.7'
+
+[packages]
+click = ">=6.7"
+requests = ">=2.18.4"
+requests[security] = ">=2.18.4"
+beautifulsoup4 = ">=4.6.0"
+lxml = ">=4.0.0"
+icalendar = ">=3.11.7" 
