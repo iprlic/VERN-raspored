@@ -1,9 +1,11 @@
 import click
 import logging.config
+import datetime
 from config import LOGGING, STUDOMATIC_URL
 from session import ScrapeSession
 from lxml import html
-import datetime
+from ics import Calendar, Event
+from pytz import timezone
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger('studomatic-scrapper')
@@ -15,7 +17,7 @@ class Scrapper(object):
     viewStateGenerator = None
 
     def __init__(self, username, password, weeks, wait=None):
-        logger.info('Started scrapper for user %s' % username)
+        logger.info('Started scrapper for user {}'.format(username))
         self.schedule = []
         self.today = datetime.date.today()
         self.last_monday = self.today - datetime.timedelta(days=self.today.weekday())
@@ -23,10 +25,12 @@ class Scrapper(object):
         self.html_parser = html.HTMLParser(encoding='windows-1250')
         self.session = ScrapeSession(wait=wait)
         self.init_session()
+        self.username = username
         self.login(username, password)
         self.fetchSchedule()
+        logger.info('Scraping finished')
         self.generateCalendar()
-
+        logger.info('Generated {}.ics'.format(username))
 
     def init_session(self):
         self.session.get(STUDOMATIC_URL)
@@ -70,7 +74,9 @@ class Scrapper(object):
                 self.schedule.append({
                     'date': classDate,
                     'time': classTime,
-                    'date_time': datetime.datetime.strptime(classDate + ' ' + classTime, '%d.%m.%Y. %H:%M'),
+                    'date_time': timezone('CET').localize(
+                                                    datetime.datetime.strptime('{} {}'.format(classDate, classTime),
+                                                   '%d.%m.%Y. %H:%M')),
                     'location': classLocation,
                     'professor': classProfessor,
                     'name': className,
@@ -118,12 +124,26 @@ class Scrapper(object):
         self.extractViewState(startPage)
 
     def generateCalendar(self):
-        pass
+        calendar = Calendar(creator=self.username)
+
+        for event in self.schedule:
+            evt = Event()
+            evt.name = event['name']
+            evt.location = event['location']
+            evt.begin = event['date_time']
+            evt.duration = datetime.timedelta(hours=1, minutes=30)
+            evt.description = '{}, {}'.format(event['professor'], event['type'])
+            calendar.events.append(evt)
+        self.calendar = calendar
+
+        with open('{}.ics'.format(self.username), 'w') as f:
+            f.writelines(calendar)
+
 
 @click.command()
 @click.option( '--username',  prompt=True, help='Studomatic username')
 @click.option('--password', prompt=True, hide_input=True, help='Studomatic password')
-@click.option('--weeks', default=20, help='Number of weeks ahead to scrape. Default is 40.')
+@click.option('--weeks', default=20, help='Number of weeks ahead to scrape. Default is 20.')
 @click.option('--wait', default=1, type=float, help='Minimum time in seconds to wait in between requests'
                                                     ' for the session. Default is 1 second.')
 def cli(*args, **kwargs):
