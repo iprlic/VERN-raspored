@@ -137,7 +137,7 @@ class Scrapper(object):
             evt.duration = datetime.timedelta(minutes=45 * event['duration'])
 
             evt.description = '{}, {}'.format(event['professor'], event['type'])
-            calendar.events.append(evt)
+            calendar.events.add(evt)
         self.calendar = calendar
 
         with open('{}.ics'.format(self.username), 'w') as f:
