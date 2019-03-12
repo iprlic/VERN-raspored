@@ -70,6 +70,7 @@ class Scrapper(object):
                 className = str(classDescription[2]).strip()
                 classType = str(classDescription[4]).strip()
                 classAdditionalInfo = str(classDescription[5]).strip()
+                classDuration = int(classAdditionalInfo[0])
 
                 self.schedule.append({
                     'date': classDate,
@@ -81,7 +82,8 @@ class Scrapper(object):
                     'professor': classProfessor,
                     'name': className,
                     'type': classType,
-                    'additional_info': classAdditionalInfo
+                    'additional_info': classAdditionalInfo,
+                    'duration': classDuration
                 })
 
             self.extractViewState(weekSchedulePage)
@@ -131,7 +133,9 @@ class Scrapper(object):
             evt.name = event['name']
             evt.location = event['location']
             evt.begin = event['date_time']
-            evt.duration = datetime.timedelta(hours=1, minutes=30)
+
+            evt.duration = datetime.timedelta(minutes=45 * event['duration'])
+
             evt.description = '{}, {}'.format(event['professor'], event['type'])
             calendar.events.append(evt)
         self.calendar = calendar
